@@ -72,11 +72,12 @@ export default function ChromaticityColorPicker({
 
   // Draw chromaticity diagram
   const drawChromaticityDiagram = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
     // Clear canvas
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -210,62 +211,73 @@ export default function ChromaticityColorPicker({
     ctx.lineWidth = 1;
     ctx.stroke();
 
+    } catch (error) {
+      console.error('Error drawing chromaticity diagram:', error);
+    }
   }, [currentColor, currentXY, selectedColorSpace, showGamutOverlay]);
 
   // Handle canvas click/drag
   const handleCanvasInteraction = useCallback((event: React.MouseEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
 
-    // Convert to chromaticity coordinates
-    const chromaticityX = (x - DIAGRAM_OFFSET_X) / DIAGRAM_SIZE;
-    const chromaticityY = 1 - (y - DIAGRAM_OFFSET_Y) / DIAGRAM_SIZE;
+      // Convert to chromaticity coordinates
+      const chromaticityX = (x - DIAGRAM_OFFSET_X) / DIAGRAM_SIZE;
+      const chromaticityY = 1 - (y - DIAGRAM_OFFSET_Y) / DIAGRAM_SIZE;
 
-    // Clamp to valid range
-    const clampedX = Math.max(0, Math.min(1, chromaticityX));
-    const clampedY = Math.max(0, Math.min(1, chromaticityY));
+      // Clamp to valid range
+      const clampedX = Math.max(0, Math.min(1, chromaticityX));
+      const clampedY = Math.max(0, Math.min(1, chromaticityY));
 
-    // Update current chromaticity
-    const newXY: xyColor = { x: clampedX, y: clampedY, Y: luminance };
-    setCurrentXY(newXY);
+      // Update current chromaticity
+      const newXY: xyColor = { x: clampedX, y: clampedY, Y: luminance };
+      setCurrentXY(newXY);
 
-    // Convert to XYZ then to RGB
-    const xyz = xyYToXYZ(newXY);
-    const rgb = XYZToRGB(xyz, selectedColorSpace);
-    
-    // Apply gamma correction and clamp
-    const correctedRgb: RGBColor = {
-      r: Math.max(0, Math.min(255, gammaCorrect(rgb.r) * 255)),
-      g: Math.max(0, Math.min(255, gammaCorrect(rgb.g) * 255)),
-      b: Math.max(0, Math.min(255, gammaCorrect(rgb.b) * 255))
-    };
+      // Convert to XYZ then to RGB
+      const xyz = xyYToXYZ(newXY);
+      const rgb = XYZToRGB(xyz, selectedColorSpace);
+      
+      // Apply gamma correction and clamp
+      const correctedRgb: RGBColor = {
+        r: Math.max(0, Math.min(255, gammaCorrect(rgb.r) * 255)),
+        g: Math.max(0, Math.min(255, gammaCorrect(rgb.g) * 255)),
+        b: Math.max(0, Math.min(255, gammaCorrect(rgb.b) * 255))
+      };
 
-    setCurrentColor(correctedRgb);
+      setCurrentColor(correctedRgb);
+    } catch (error) {
+      console.error('Error in canvas interaction:', error);
+    }
   }, [luminance, selectedColorSpace]);
 
   // Update color when dependencies change
   useEffect(() => {
-    // Convert current color to other formats
-    const xyz = RGBToXYZ(currentColor, selectedColorSpace);
-    const hsl = RGBToHSL(currentColor);
-    const lab = XYZToLAB(xyz);
-    const oklch = LABToOKLCH(lab);
-    const xy = XYZToxyY(xyz);
-    const cssColor = generateCSSColor(currentColor, selectedColorSpace);
+    try {
+      // Convert current color to other formats
+      const xyz = RGBToXYZ(currentColor, selectedColorSpace);
+      const hsl = RGBToHSL(currentColor);
+      const lab = XYZToLAB(xyz);
+      const oklch = LABToOKLCH(lab);
+      const xy = XYZToxyY(xyz);
+      const cssColor = generateCSSColor(currentColor, selectedColorSpace);
 
-    onColorChange?.({
-      rgb: currentColor,
-      hsl,
-      lab,
-      oklch,
-      xy,
-      colorSpace: selectedColorSpace,
-      cssColor
-    });
+      onColorChange?.({
+        rgb: currentColor,
+        hsl,
+        lab,
+        oklch,
+        xy,
+        colorSpace: selectedColorSpace,
+        cssColor
+      });
+    } catch (error) {
+      console.error('Error updating color:', error);
+    }
   }, [currentColor, selectedColorSpace, onColorChange]);
 
   // Redraw canvas when needed
@@ -275,8 +287,13 @@ export default function ChromaticityColorPicker({
 
   // Copy color to clipboard
   const copyToClipboard = (text: string, format: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`${format} copied to clipboard!`);
+    try {
+      navigator.clipboard.writeText(text);
+      toast.success(`${format} copied to clipboard!`);
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      toast.error('Failed to copy to clipboard');
+    }
   };
 
   // Calculate color information
